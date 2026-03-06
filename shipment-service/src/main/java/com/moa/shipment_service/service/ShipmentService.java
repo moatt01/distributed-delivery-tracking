@@ -1,12 +1,16 @@
 package com.moa.shipment_service.service;
 
 import com.moa.shipment_service.domain.ShipmentStatus;
+import com.moa.shipment_service.domain.exception.ResourceNotFoundException;
 import com.moa.shipment_service.dto.CreateShipmentRequest;
+import com.moa.shipment_service.dto.PageResponse;
 import com.moa.shipment_service.dto.ShipmentResponse;
 import com.moa.shipment_service.entity.Shipment;
 import com.moa.shipment_service.mapper.ShipmentMapper;
 import com.moa.shipment_service.repository.ShipmentRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,6 +27,21 @@ public class ShipmentService {
         this.mapper = mapper;
     }
 
+    public PageResponse<ShipmentResponse> list(Pageable pageable) {
+        Page<ShipmentResponse> page = ShipmentRepo.findAll(pageable)
+                .map(mapper::toResponse); // Page<Entity> -> Page<DTO>
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.hasNext(),
+                page.hasPrevious()
+        );
+    }
+
+
     public ShipmentResponse create(CreateShipmentRequest request) {
 
         Shipment shipment = mapper.toEntity(request);
@@ -36,16 +55,16 @@ public class ShipmentService {
         return mapper.toResponse(saved);
     }
 
-    public ShipmentResponse getById(UUID id) {
-        Shipment shipment = ShipmentRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Shipment not found: " + id));
+    public Shipment getById(UUID id) {
+        return  ShipmentRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment not found: " + id));
 
-        return mapper.toResponse(shipment);
+
     }
     public Shipment updateStatus(UUID shipmentId, ShipmentStatus newStatus) {
 
         Shipment shipment = ShipmentRepo.findById(shipmentId)
-                .orElseThrow(() -> new EntityNotFoundException("Shipment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment not found"));
 
         ShipmentStatus current = shipment.getStatus();
 
